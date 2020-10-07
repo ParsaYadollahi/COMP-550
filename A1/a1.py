@@ -1,9 +1,4 @@
 #!/usr/bin/env python
-from nltk.stem import WordNetLemmatizer
-from nltk.stem.porter import PorterStemmer
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-import nltk
 import string
 import random
 
@@ -20,12 +15,20 @@ from sklearn.ensemble import RandomForestClassifier
 
 
 # NLTK
+import nltk
+from nltk.stem import WordNetLemmatizer
+from nltk.stem.porter import PorterStemmer
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk import pos_tag
+from nltk.corpus import wordnet
+
 
 NEGFILE = './rt-polaritydata/rt-polarity.neg'
 POSFILE = './rt-polaritydata/rt-polarity.pos'
 DATAENCODING = "utf-8"
-TRAIN_TEST_SPLIT = 0.8  # define ratio of dataset used for training vs testing
-STOPWORDS = set(stopwords.words('english'))
+TRAIN_TEST_SPLIT = 0.8
+stopwords = set(stopwords.words('english'))
 stemmer = PorterStemmer()
 lemmatizer = WordNetLemmatizer()
 
@@ -47,7 +50,7 @@ def getData():
     N = len(split_data)
     perms = np.random.permutation(N)
 
-    # Get numners between 0 and len(all data)
+    # Get numbers between 0 and len(all data)
     N_train = int(TRAIN_TEST_SPLIT * N)
 
     x_train, y_train = [split_data[i][0] for i in perms[:N_train]], [
@@ -66,24 +69,41 @@ def basic_preprocess(text):
 
     # Remove stopwords and punctuation
     basic_preprocess_text = [
-        word for word in text if word not in STOPWORDS and word not in string.punctuation]
+        word for word in text if word not in stopwords and word not in string.punctuation]
 
     return basic_preprocess_text
 
 
-def stemming(text):
+def stem(text):
     text = basic_preprocess(text)
     return " ".join([stemmer.stem(word) for word in text])
 
 
-def lemmatization(text):
+def lemmatize(text):
     text = basic_preprocess(text)
-    return " ".join([lemmatizer.lemmatize(word) for word in text])
+
+    lemmatized_text = []
+    for word in text:
+        lemmatized_text.append(
+            lemmatizer.lemmatize(word, get_wordnet_pos(word)))
+
+    return " ".join(lemmatized_text)
+
+
+def get_wordnet_pos(word):
+    tag = nltk.pos_tag([word])[0][1][0].upper()
+    tag_dict = {"J": wordnet.ADJ,
+                "N": wordnet.NOUN,
+                "V": wordnet.VERB,
+                "R": wordnet.ADV}
+
+    return tag_dict.get(tag, wordnet.NOUN)
 
 
 def preprocess_train_test(x_train, x_test):
     # Remove all words that occur less than 2 times
-    vectorizer = CountVectorizer(preprocessor=stemming, min_df=2, max_df=0.8)
+    vectorizer = CountVectorizer(
+        preprocessor=lemmatize, min_df=4, max_df=0.5)
 
     # transform text into vector
     train_feature_set = vectorizer.fit_transform(x_train)
@@ -96,31 +116,13 @@ def preprocess_train_test(x_train, x_test):
     return fv_train, fv_test
 
 
-# class Logistic_Regression_Classifier:
-#     def __init__(self):
-#       # I just spent the past 3 hours trying to do linear regression
-#       # When I was supposed to be doing logistic :')
-#         regressor = LogisticRegression(random_state=0, C=2)
-#         self.regressor = regressor
-
-#     def fit(self, x_train, y_train):
-#         self.x_train = x_train
-#         self.y_train = y_train
-
-
-#         self.regressor.fit(x_train, y_train)
-#         return self
-
-#     def predict(self, x_test):
-#         y_pred = self.regressor.predict(x_test)
-#         return y_pred
-
-
 def lr_Classifier(fv_train, fv_test, y_train, y_test):
     lr = LogisticRegression()
     lr.fit(fv_train, y_train)
 
     y_pred = lr.predict(fv_test)
+    cm = confusion_matrix(y_test, y_pred)
+    print("\n Comfusion Matrix: \n", cm)
     return calculate_accuracy(y_test, y_pred)
 
 
@@ -138,7 +140,7 @@ def nb_Classifier(fv_train, fv_test, y_train, y_test):
     return calculate_accuracy(y_test, y_pred)
 
 
-def random_baseline_Classifier(fv_test, y_test):
+def random_baseline(fv_test, y_test):
     y_pred = []
     for i in range(len(fv_test)):
         y_pred.append(random.randint(0, 1))
@@ -168,32 +170,28 @@ def __init__():
     # Feature vectors
     fv_train, fv_test = preprocess_train_test(x_train, x_test)
 
+    # Naïve Bayes
+    nb_Classifier_Accuracy = nb_Classifier(
+        fv_train, fv_test, y_train, y_test)
+    print("Accuracy for NB is: ", nb_Classifier_Accuracy)
+
     # Logistic Regresssion Algo
     lr_Classifier_Accuracy = lr_Classifier(
         fv_train, fv_test, y_train, y_test)
-
     print("Accuracy for Logistic Regression is: ", lr_Classifier_Accuracy)
 
     # Support Vector Machine
     svm_Classifier_Accuracy = svm_Classifier(
         fv_train, fv_test, y_train, y_test)
-
     print("Accuracy for SVM is: ", svm_Classifier_Accuracy)
 
-    # Naïve Bayes
-    nb_Classifier_Accuracy = nb_Classifier(
-        fv_train, fv_test, y_train, y_test)
-
-    print("Accuracy for NB is: ", nb_Classifier_Accuracy)
-
     # Random baseline
-    rb_Classifier_Accuracy = random_baseline_Classifier(fv_test, y_test)
+    rb_Classifier_Accuracy = random_baseline(fv_test, y_test)
     print("Accuracy for Random Baseline: ", rb_Classifier_Accuracy)
 
     # Random Forest
     rf_Classifier_Accuracy = random_forest_Classifier(
         fv_train, fv_test, y_train, y_test)
-
     print("Accuracy for random Forest: ", rf_Classifier_Accuracy)
 
 
