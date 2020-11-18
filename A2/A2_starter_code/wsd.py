@@ -1,5 +1,7 @@
 # NLTK
+from os import getsid
 from re import match
+from typing import overload
 from nltk import pos_tag
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet, stopwords
@@ -9,7 +11,6 @@ from nltk.tokenize import word_tokenize
 # Builtins
 import re
 import string
-
 
 DATAENCODING = "utf-8"
 STOPWORDS = set(stopwords.words('english'))
@@ -24,6 +25,9 @@ class wsd:
         return
 
     def basic_preprocess(self, wsd_instance):
+
+        lemma = wsd_instance.lemma.decode(DATAENCODING)
+        lemma = lemma.lower()
 
         preprocessed_context = ' '.join(
             [c.decode(DATAENCODING) for c in wsd_instance.context])
@@ -50,19 +54,13 @@ class wsd:
             else:
                 lemmatized_text.append(word)
 
-        preprocessed_context = " ".join(lemmatized_text)
-
-        lemma = wsd_instance.lemma.decode(DATAENCODING)
-        lemma = lemma.lower()
-
-        print(preprocessed_context)
+        self.preprocessed_context = " ".join(lemmatized_text)
 
         return lemma, preprocessed_context
 
     def most_frequent_sense_baseline(self):
         pred = set()
         lemma = self.lemma
-
         syns = wordnet.synsets(lemma)[0]
 
         for matchingSense in syns.lemmas():
@@ -70,7 +68,7 @@ class wsd:
 
         return pred
 
-    def run_lesk(self):
+    def lesk(self):
         pred = set()
         lemma = self.lemma
         context = self.preprocessed_context
@@ -82,3 +80,43 @@ class wsd:
             pred.add(matchingSense.key())
 
         return pred
+
+
+# Simplified Lesk
+    # method for counting overlap
+
+
+    def computeOverlap(self, signature, context):
+        return len(context.intersection(signature))
+
+    def filterText(self, sense):
+        tokens = word_tokenize(sense)
+        return [word for word in tokens if not word in STOPWORDS]
+
+    def getSignature(self, sense):
+
+        wordSet = set(self.filterText(sense.definition()))
+
+        for example in sense.examples():
+            wordSet = wordSet.union(set(self.filterText(example)))
+
+        return wordSet
+
+    def simplified_lesk(self):  # returns best sense of word
+        # Implementation based on Wikipedias simplified lesk Algo
+        lemma = self.lemma
+        context = self.preprocessed_context
+        maxOverlap = 0
+        senses = wordnet.synsets(lemma)
+        bestSense = senses[0]
+        context = self.preprocessed_context
+
+        for sense in senses:
+            signature = self.getSignature(sense)
+            overlap = self.computeOverlap(signature=signature, context=context)
+
+            if overlap > maxOverlap:
+                maxOverlap = overlap
+                bestSense = sense
+
+        return bestSense

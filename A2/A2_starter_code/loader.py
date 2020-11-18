@@ -73,7 +73,7 @@ def to_ascii(s):
     return codecs.encode(s, 'ascii', 'ignore')
 
 
-if __name__ == '__main__':
+def load_data():
     data_f = 'multilingual-all-words.en.xml'
     key_f = 'wordnet.en.key'
     dev_instances, test_instances = load_instances(data_f)
@@ -87,3 +87,5 @@ if __name__ == '__main__':
     # read to use here
     print(len(dev_instances))  # number of dev instances
     print(len(test_instances))  # number of test instances
+
+    return dev_instances, test_instances, dev_key, test_key

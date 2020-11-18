@@ -1,11 +1,8 @@
 from wsd import wsd
-from loader import load_instances, load_key
+from loader import load_data
 
 # load data
-data_f = 'multilingual-all-words.en.xml'
-key_f = 'wordnet.en.key'
-dev_instances, test_instances = load_instances(data_f)
-dev_key, test_key = load_key(key_f)
+dev_instances, test_instances, dev_key, test_key = load_data()
 
 most_freq_baseline_count = 0
 lesk_count = 0
@@ -14,7 +11,19 @@ lesk_count = 0
 for idx, wsd_instance in test_instances.items():
     sense = set(test_key[idx])
 
-    wordSenseDisambiguator = wsd(wsd_instance)
+    w = wsd(wsd_instance)
+
+    most_frequent_baseline_sense_pred = w.most_frequent_sense_baseline()
+    if (w.computeOverlap(sense, most_frequent_baseline_sense_pred) > 0):
+        most_freq_baseline_count = most_freq_baseline_count + 1
+
+    lesk_sense_pred = w.lesk()
+    if (w.computeOverlap(sense, lesk_sense_pred) > 0):
+        lesk_count = lesk_count + 1
+
+print(most_freq_baseline_count/len(test_instances))
+print(lesk_count/len(test_instances))
+
 
 #     most_freq_baseline_sense_pred = wsd.most_frequent_baseline()
 #     most_freq_baseline_count += 1 if len(
