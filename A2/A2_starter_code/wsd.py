@@ -1,4 +1,5 @@
 # NLTK
+from re import match
 from nltk import pos_tag
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet, stopwords
@@ -18,7 +19,8 @@ LEMMATIZER = WordNetLemmatizer()
 class wsd:
     def __init__(self, wsd_instance) -> None:
         self.wsd_instance = wsd_instance
-        self.lemma, self.context = self.basic_preprocess(wsd_instance)
+        self.lemma, self.preprocessed_context = self.basic_preprocess(
+            wsd_instance)
         return
 
     def basic_preprocess(self, wsd_instance):
@@ -56,3 +58,27 @@ class wsd:
         print(preprocessed_context)
 
         return lemma, preprocessed_context
+
+    def most_frequent_sense_baseline(self):
+        pred = set()
+        lemma = self.lemma
+
+        syns = wordnet.synsets(lemma)[0]
+
+        for matchingSense in syns.lemmas():
+            pred.add(matchingSense.key())
+
+        return pred
+
+    def run_lesk(self):
+        pred = set()
+        lemma = self.lemma
+        context = self.preprocessed_context
+
+        syns = lesk(context, lemma)
+
+        # Add in all the possible keys
+        for matchingSense in syns.lemmas():
+            pred.add(matchingSense.key())
+
+        return pred
