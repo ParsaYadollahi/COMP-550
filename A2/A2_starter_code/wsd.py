@@ -25,6 +25,9 @@ class wsd:
             wsd_instance)
         return
 
+    def get_lemma_and_context(self):
+        return self.lemma, self.preprocessed_context
+
     def basic_preprocess(self, wsd_instance):
 
         lemma = wsd_instance.lemma.decode(DATAENCODING)

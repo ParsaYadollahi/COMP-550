@@ -84,8 +84,4 @@ def load_data():
     test_instances = {
         k: v for (k, v) in test_instances.items() if k in test_key}
 
-    # read to use here
-    print(len(dev_instances))  # number of dev instances
-    print(len(test_instances))  # number of test instances
-
     return dev_instances, test_instances, dev_key, test_key
